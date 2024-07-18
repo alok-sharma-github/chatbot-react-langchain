@@ -1,4 +1,3 @@
-// src/Chatbot.js
 import React, { useState } from "react";
 import "./Chatbot.css";
 
@@ -6,9 +5,14 @@ const Chatbot = () => {
   const [chatbotVisible, setChatbotVisible] = useState(false);
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState("");
+  const [sessionID, setSessionID] = useState("default_session"); // Initial session ID
 
   const toggleChatbot = () => {
     setChatbotVisible(!chatbotVisible);
+    if (!chatbotVisible) {
+      // Clear messages when chatbot is closed
+      setMessages([]);
+    }
   };
 
   const sendMessage = () => {
@@ -16,10 +20,30 @@ const Chatbot = () => {
       const userMessage = { text: userInput, type: "user" };
       setMessages([...messages, userMessage]);
       setUserInput("");
-      setTimeout(() => {
-        const botMessage = { text: getBotResponse(userInput), type: "bot" };
-        setMessages((prevMessages) => [...prevMessages, botMessage]);
-      }, 1000);
+
+      // Prepare the data object to send to Flask backend
+      const data = {
+        query: userInput,
+        session_id: sessionID,
+      };
+
+      // Example fetch call to send data to Flask backend
+      fetch("http://localhost:5000/query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          const botMessage = { text: data.answer, type: "bot" };
+          setMessages((prevMessages) => [...prevMessages, botMessage]);
+        })
+        .catch((error) => {
+          console.error("Error sending message:", error);
+          // Handle errors if any
+        });
     }
   };
 
@@ -28,19 +52,6 @@ const Chatbot = () => {
       event.preventDefault();
       sendMessage();
     }
-  };
-
-  const getBotResponse = (userMessage) => {
-    const responses = {
-      hello: "Hello! How can I assist you today?",
-      hi: "Hi there! What can I do for you?",
-      "how are you": "I am just a bot, but I am here to help you!",
-      bye: "Goodbye! Have a great day!",
-    };
-    return (
-      responses[userMessage.toLowerCase()] ||
-      "I'm sorry, I didn't understand that."
-    );
   };
 
   return (
